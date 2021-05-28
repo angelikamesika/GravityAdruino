@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true"
+    tools:context=".MainActivity">
+
+    <RelativeLayout
+        android:id="@+id/layoutFirst"
+        android:layout_width="350dp"
+        android:layout_height="match_parent"
+        android:background="#ffffff"
+        android:visibility="visible"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/buttonStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_below="@+id/editText"
+            android:onClick="onClickStart"
+            android:text="Begin"
+            android:textSize="16dp"
+            android:layout_marginLeft="16dp"/>
+
+        <Button
+            android:id="@+id/buttonSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/editText"
+            android:layout_toEndOf="@+id/buttonStart"
+            android:layout_toRightOf="@+id/buttonStart"
+            android:onClick="onClickSend"
+            android:text="Send"
+            android:textSize="20dp"
+            android:layout_marginLeft="16dp"/>
+
+        <Button
+            android:id="@+id/buttonStop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/editText"
+
+            android:layout_toEndOf="@+id/buttonSend"
+            android:layout_toRightOf="@+id/buttonSend"
+            android:onClick="onClickStop"
+            android:text="Stop"
+            android:textSize="20dp"
+            android:layout_marginLeft="16dp"/>
+
+
+        <Button
+            android:id="@+id/buttonClear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buttonStart"
+
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="16dp"
+            android:onClick="onClickClear"
+            android:text="Clear"
+            android:textSize="20dp"/>
+
+        <Button
+            android:id="@+id/buttonBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buttonSend"
+            android:layout_toEndOf="@+id/buttonClear"
+            android:layout_marginTop="10dp"
+            android:layout_toRightOf="@+id/buttonSend"
+
+            android:layout_marginLeft="16dp"
+            android:onClick="onClickBack"
+            android:text="BACK!"
+            android:textSize="20dp"
+            android:textColor="#000000"
+
+            />
+
+        <EditText
+            android:id="@+id/editText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true" />
+
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buttonClear" />
+
+
+    </RelativeLayout>
+
+    <VideoView
+        android:id="@+id/videoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"
+        android:layout_marginBottom="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@+id/layoutFirst"
+        android:layout_toRightOf="@+id/layoutFirst" />
+
+    <Button
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:id="@+id/buttonDebug"
+        android:background="#00000000"
+        android:visibility="visible"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+
+        />
+</RelativeLayout>

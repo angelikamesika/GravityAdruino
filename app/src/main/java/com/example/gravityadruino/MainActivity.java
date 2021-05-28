@@ -3,15 +3,18 @@ package com.example.gravityadruino;
 import android.Manifest;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import android.provider.MediaStore;
 import android.view.View;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -19,9 +22,13 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.felhr.usbserial.UsbSerialDevice;
@@ -34,6 +41,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import android.net.Uri;
 
@@ -41,19 +49,21 @@ public class MainActivity extends AppCompatActivity {
     private static final int READ_STORAGE_PERMISSION_REQUEST_CODE = 1;
     private static final int WRITE_STORAGE_PERMISSION_REQUEST_CODE = 2;
     public final String ACTION_USB_PERMISSION = "com.hariharan.arduinousb.USB_PERMISSION";
-    Button startButton, sendButton, clearButton, stopButton;
-    TextView textView;
-    EditText editText;
-    UsbManager usbManager;
-    UsbDevice device;
-    UsbSerialDevice serialPort;
-    UsbDeviceConnection connection;
-    VideoView mVideoView;
-    QueueImpl<Integer> mQueueData = new QueueImpl<Integer>();
+    private Button startButton, sendButton, clearButton, stopButton, debugButton, backButton;
+    private TextView textView;
+    private EditText editText;
+    private RelativeLayout mLayoutFirst;
+    private UsbManager usbManager;
+    private UsbDevice device;
+    private UsbSerialDevice serialPort;
+    private UsbDeviceConnection connection;
+    private VideoView mVideoView;
+    private QueueImpl<Integer> mQueueData = new QueueImpl<Integer>();
     boolean mIsChangeVideo = false;
     private VideoProcess mVideoProcess;
     private final int mMaxQueueSize = 4;
-    private final int mDeltaWeigth = 8;
+    private final int mDeltaWeigth = 12;
+    private MyMultiClickListener mMyMultiClickListener;
 
     enum GravityState {
         NONE,
@@ -130,13 +140,13 @@ public class MainActivity extends AppCompatActivity {
                             tvAppend(textView, "Serial Connection Opened!\n");
 
                         } else {
-                            Log.d("SERIAL", "PORT NOT OPEN");
+                            Log.d("AAA_GRAVITY", "PORT NOT OPEN");
                         }
                     } else {
-                        Log.d("SERIAL", "PORT IS NULL");
+                        Log.d("AAA_GRAVITY", "PORT IS NULL");
                     }
                 } else {
-                    Log.d("SERIAL", "PERM NOT GRANTED");
+                    Log.d("AAA_GRAVITY", "PERM NOT GRANTED");
                 }
             } else if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
                 // onClickStart(startButton);
@@ -151,17 +161,38 @@ public class MainActivity extends AppCompatActivity {
         ;
     };
 
+    private void setWindowParametres() {
+        getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        int UI_OPTIONS = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().getDecorView().setSystemUiVisibility(UI_OPTIONS);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main_land);
+        setWindowParametres();
         usbManager = (UsbManager) getSystemService(this.USB_SERVICE);
         startButton = (Button) findViewById(R.id.buttonStart);
         sendButton = (Button) findViewById(R.id.buttonSend);
         clearButton = (Button) findViewById(R.id.buttonClear);
         stopButton = (Button) findViewById(R.id.buttonStop);
+        debugButton = findViewById(R.id.buttonDebug);
+        backButton = findViewById(R.id.buttonBack);
+        mLayoutFirst = findViewById(R.id.layoutFirst);
         editText = (EditText) findViewById(R.id.editText);
         textView = (TextView) findViewById(R.id.textView);
+
+        mMyMultiClickListener = new MyMultiClickListener(mLayoutFirst);
+        debugButton.setOnClickListener(mMyMultiClickListener);
+
         mVideoView = (VideoView) findViewById(R.id.videoView);
         mVideoProcess = new VideoProcess(this);
         //setUiEnabled(false);
@@ -184,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
-        onStartUsb();
+        //onStartUsb();
         requestPermissionForReadExtertalStorage();
         // testExternalStorage();
         super.onResume();
@@ -344,14 +375,83 @@ public class MainActivity extends AppCompatActivity {
             Log.d("AAA_GRAV", "EXCEPTION " + aE);
             aE.printStackTrace();
         }
-
-
         mVideoView.setVideoURI(Uri.parse(filePath));
         mVideoView.start();
     }
 
+    private void getFileFromContentProviderUri() {
+        Uri collection;
+        Uri fileUri = Uri.EMPTY;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+        } else {
+            collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        }
+        Log.d("AAA_GRAV", "MEDIA collection = " + collection);
+        String[] projection = new String[]{
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.DURATION,
+                MediaStore.Video.Media.SIZE
+        };
+//        String[] projection = {MediaStore.Images.Media._ID};
+//// Create the cursor pointing to the SDCard
+//        cursor = managedQuery( MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+//                projection,
+//                MediaStore.Images.Media.DATA + " like ? ",
+//                new String[] {"%myimagesfolder%"},
+//                null);
+
+
+        // String selection = MediaStore.Video.Media.DISPLAY_NAME + " like ? ";
+        String selection = MediaStore.Video.Media.DATA + " like ? ";
+
+        //String[] selectionArgs = new String[] {"%"+"GRAVITY_video_for_programming"+"%"};
+        String[] selectionArgs = new String[]{"%" + "g1" + "%"};
+        String sortOrder = MediaStore.Video.Media.DISPLAY_NAME + " ASC";
+
+        try (Cursor cursor = getApplicationContext().getContentResolver().query(
+                collection,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+        )) {
+            // Cache column indices.
+            int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
+            int nameColumn =
+                    cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME);
+
+
+            while (cursor.moveToNext()) {
+                // Get values of columns for a given video.
+                long id = cursor.getLong(idColumn);
+                String name = cursor.getString(nameColumn);
+                Log.d("AAA_GRAV", "MEDIA name = " + name);
+
+                Uri contentUri = ContentUris.withAppendedId(
+                        MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id);
+
+
+                fileUri = contentUri;
+                Log.d("AAA_GRAV", "MEDIA fileUri = " + fileUri);
+
+            }
+        }
+
+        mVideoView.setVideoURI(fileUri);
+        mVideoView.start();
+    }
+
+
     public void onClickClear(View view) {
-        textView.setText(" ");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                textView.setText(" ");
+            }
+        });
+
 //        VideoProcess vp = new VideoProcess(this);
 //        Uri once = vp.getFileURI(VideoProcess.RELOADING[0]);
 //        Uri loop = vp.getFileURI(VideoProcess.RELOADING[1]);
@@ -362,8 +462,19 @@ public class MainActivity extends AppCompatActivity {
         // vp.playOnce(mVideoView, once);
         // getFileFromAssetsUri();
 
-       // testPlayVideoAndStatus(10);
+        // testPlayVideoAndStatus(10);
+        //  getFileFromContentProviderUri();
     }
+
+    public void onClickBack(View view) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mLayoutFirst.setVisibility(View.GONE);
+            }
+        });
+    }
+
 
     private void tvAppend(TextView tv, CharSequence text) {
         final TextView ftv = tv;
@@ -437,11 +548,11 @@ public class MainActivity extends AppCompatActivity {
 
                     int next = (int) it.next();
 
-                            Log.d("AAA_GRAV", "prev = " + prev + "next = " + next);
+                    Log.d("AAA_GRAV", "prev = " + prev + "next = " + next);
                     if (Math.abs(next - prev) > mDeltaWeigth) {
                         gravityState = GravityState.TUNING;
 
-                    } else if (/*prev == var*/Math.abs(var - prev) <= mDeltaWeigth){
+                    } else if (/*prev == var*/Math.abs(var - prev) <= mDeltaWeigth) {
                         gravityState = establishGravityState(gravity);
                     }
                     prev = next;
@@ -458,8 +569,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d("AAA_GRAV", "mIsChangeVideo = " + mIsChangeVideo);
-
-
     }
 
     private GravityState establishGravityState(int gravity) {
@@ -553,7 +662,66 @@ public class MainActivity extends AppCompatActivity {
         mQueueData.enqueue(0);
         mQueueData.enqueue(0);
         mQueueData.enqueue(0);
+    }
+
+
+    public class MyMultiClickListener implements View.OnClickListener {
+        private boolean isRunning = false;
+        private int resetInTime = 2500;
+        private int counter = 0;
+        private final int COUNT = 4;
+        private RelativeLayout mLayout;
+
+        public MyMultiClickListener(RelativeLayout aLayout) {
+
+            mLayout = aLayout;
+        }
+
+        @Override
+        public void onClick(View v) {
+            Log.d("AAA_grav", "onClick counter = " + counter + "isRunning = " + isRunning);
+            if (isRunning) {
+                if (counter == COUNT) {
+                    onMultiCliclkListener();
+                    // return;
+                }
+                if (counter == 2) {
+                    Toast.makeText(MainActivity.this, "You tap 3 times from 5", Toast.LENGTH_LONG).show();
+                }
+
+            }
+            counter++;
+            if (!isRunning) {
+                isRunning = true;
+                Log.d("AAA_grav", "onClick counter = " + counter);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(resetInTime);
+                            isRunning = false;
+                            counter = 0;
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
+
+        }
+
+        private void onMultiCliclkListener() {
+            Log.d("AAA_grav", "onMultiCliclkListener!!!");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mLayout.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+
+    }
+
 
 
     }
-}

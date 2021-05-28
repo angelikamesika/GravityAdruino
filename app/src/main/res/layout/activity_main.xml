@@ -5,7 +5,9 @@
     android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity">
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context=".MainActivity"
+    android:keepScreenOn="true">
 
     <EditText
         android:layout_width="wrap_content"
@@ -74,5 +76,14 @@
         android:id="@+id/videoView"
         android:layout_marginBottom="20dp"
         android:layout_alignParentBottom="true"
+        />
+
+    <Button
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:id="@+id/buttonDebug"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+
         />
 </RelativeLayout>
